@@ -1,0 +1,2294 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fotosentez — 3D Biyoloji Simülasyonu</title>
+<style>
+:root {
+  --bg: #0a1a0f;
+  --bg2: #0d2214;
+  --bg3: #112a18;
+  --surface: rgba(10,26,15,0.92);
+  --card: rgba(13,34,20,0.95);
+  --green1: #1a7a3a;
+  --green2: #2aaa55;
+  --green3: #3dd668;
+  --teal: #00c9a7;
+  --teal2: #00e6c0;
+  --gold: #f0c040;
+  --gold2: #ffd866;
+  --blue: #4ab8ff;
+  --red: #ff6b6b;
+  --orange: #ff9f43;
+  --purple: #a29bfe;
+  --text: #e8f5e9;
+  --text2: #a8d5b0;
+  --text3: #6aaa78;
+  --border: rgba(42,170,85,0.25);
+  --glow: 0 0 20px rgba(42,170,85,0.3);
+  --radius: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#app {
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ===== HEADER ===== */
+#header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: rgba(10,26,15,0.96);
+  border-bottom: 1px solid var(--border);
+  z-index: 100;
+  flex-shrink: 0;
+}
+#header-left { display: flex; align-items: center; gap: 10px; }
+#header-title { font-size: 15px; font-weight: 700; color: var(--green3); letter-spacing: -0.3px; }
+#header-subtitle { font-size: 11px; color: var(--text3); margin-top: 1px; }
+#progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.prog-dot {
+  width: 22px; height: 4px;
+  border-radius: 2px;
+  background: rgba(42,170,85,0.2);
+  transition: background 0.3s;
+}
+.prog-dot.active { background: var(--green2); }
+.prog-dot.done { background: rgba(42,170,85,0.5); }
+
+/* ===== MAIN SCENE ===== */
+#main {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+canvas#scene {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+}
+
+/* ===== INFO PANEL ===== */
+#info-panel {
+  position: absolute;
+  top: 10px; right: 10px;
+  width: 240px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  z-index: 50;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: opacity 0.3s, transform 0.3s;
+}
+#info-panel h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--teal);
+  margin-bottom: 6px;
+}
+#info-panel p {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.6;
+}
+#info-panel .formula {
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: rgba(42,170,85,0.1);
+  border-left: 3px solid var(--green2);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--gold);
+  font-family: 'Courier New', monospace;
+}
+
+/* ===== MOLECULE LABELS ===== */
+.mol-label {
+  position: absolute;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: none;
+  border: 1px solid;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: opacity 0.5s;
+  white-space: nowrap;
+  z-index: 30;
+}
+
+/* ===== BOTTOM NAV ===== */
+#bottom-nav {
+  background: rgba(10,26,15,0.96);
+  border-top: 1px solid var(--border);
+  padding: 8px;
+  z-index: 100;
+  flex-shrink: 0;
+}
+.nav-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.nav-btn {
+  flex: 1;
+  padding: 8px 4px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(26,122,58,0.08);
+  color: var(--text3);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-btn.active {
+  background: rgba(26,122,58,0.3);
+  border-color: var(--green2);
+  color: var(--green3);
+}
+.nav-btn:active { transform: scale(0.96); }
+.nav-btn .nav-icon { font-size: 14px; }
+
+.ctrl-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+}
+.ctrl-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(0,201,167,0.1);
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.ctrl-btn:active { transform: scale(0.95); background: rgba(0,201,167,0.2); }
+.ctrl-btn.primary {
+  background: rgba(42,170,85,0.2);
+  border-color: var(--green2);
+  color: var(--green3);
+}
+
+/* ===== INFO CARD POPUP ===== */
+#popup {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  z-index: 80;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: none;
+  max-height: 180px;
+  overflow-y: auto;
+}
+#popup.show { display: block; animation: slideUp 0.2s ease; }
+@keyframes slideUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+#popup h3 { font-size: 13px; font-weight: 700; color: var(--gold); margin-bottom: 6px; }
+#popup p { font-size: 12px; color: var(--text2); line-height: 1.6; }
+#popup-close {
+  position: absolute;
+  top: 8px; right: 10px;
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+/* ===== MOLECULE INDICATORS ===== */
+#mol-indicators {
+  position: absolute;
+  bottom: 60px;
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 40;
+}
+.mol-ind {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  border: 1px solid;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.mol-ind:active { transform: scale(0.96); }
+
+/* ===== SECTION 5 SLIDERS ===== */
+#experiment-panel {
+  position: absolute;
+  top: 10px; left: 10px;
+  width: 200px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  z-index: 50;
+  display: none;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+#experiment-panel.show { display: block; }
+#experiment-panel h3 { font-size: 12px; font-weight: 700; color: var(--gold); margin-bottom: 8px; }
+.slider-group { margin-bottom: 8px; }
+.slider-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text2);
+  margin-bottom: 3px;
+}
+.slider-group input[type=range] {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(42,170,85,0.2);
+  border-radius: 2px;
+  outline: none;
+}
+.slider-group input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  background: var(--green2);
+  border-radius: 50%;
+  cursor: pointer;
+}
+#rate-display {
+  margin-top: 10px;
+  padding: 6px;
+  background: rgba(42,170,85,0.1);
+  border-radius: 6px;
+  text-align: center;
+}
+#rate-display .rate-val { font-size: 18px; font-weight: 700; color: var(--green3); }
+#rate-display .rate-lbl { font-size: 9px; color: var(--text3); }
+#mini-chart {
+  margin-top: 8px;
+  height: 50px;
+}
+
+/* ===== QUIZ ===== */
+#quiz-panel {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(90%, 320px);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  z-index: 90;
+  display: none;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+#quiz-panel.show { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(-50%, -52%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+#quiz-panel h3 { font-size: 13px; font-weight: 700; color: var(--gold2); margin-bottom: 10px; }
+#quiz-panel p { font-size: 12px; color: var(--text2); margin-bottom: 10px; line-height: 1.6; }
+.quiz-option {
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(26,122,58,0.08);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+}
+.quiz-option:active { transform: scale(0.98); }
+.quiz-option.correct { background: rgba(61,214,104,0.2); border-color: var(--green3); color: var(--green3); }
+.quiz-option.wrong { background: rgba(255,107,107,0.2); border-color: var(--red); color: var(--red); }
+#quiz-feedback { font-size: 11px; margin-top: 8px; padding: 6px; border-radius: 6px; display: none; }
+#quiz-feedback.show { display: block; }
+#quiz-next {
+  margin-top: 8px;
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--green2);
+  background: rgba(42,170,85,0.2);
+  color: var(--green3);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: none;
+}
+#quiz-next.show { display: block; }
+
+/* ===== ATP / NADPH counters ===== */
+#molecule-counters {
+  position: absolute;
+  top: 10px; left: 10px;
+  display: flex;
+  gap: 8px;
+  z-index: 40;
+}
+.mol-counter {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid;
+  font-size: 11px;
+  font-weight: 700;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: none;
+}
+
+/* ===== STAGE LABEL ===== */
+#stage-label {
+  position: absolute;
+  top: 10px; left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  background: rgba(10,26,15,0.85);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--teal);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 45;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ===== PREDICTION ===== */
+#prediction-panel {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(90%, 300px);
+  background: var(--card);
+  border: 1px solid rgba(240,192,64,0.4);
+  border-radius: var(--radius);
+  padding: 14px;
+  z-index: 91;
+  display: none;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+#prediction-panel.show { display: block; animation: fadeIn 0.3s ease; }
+#prediction-panel h3 { font-size: 13px; font-weight: 700; color: var(--gold); margin-bottom: 8px; }
+.pred-btn {
+  width: 100%; padding: 8px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(240,192,64,0.3);
+  background: rgba(240,192,64,0.08);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+.pred-btn:active { transform: scale(0.98); }
+.pred-btn.picked { border-color: var(--gold); color: var(--gold); background: rgba(240,192,64,0.15); }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- HEADER -->
+  <div id="header">
+    <div id="header-left">
+      <div>
+        <div id="header-title">🌿 Fotosentez</div>
+        <div id="header-subtitle" id="section-name">3D Biyoloji Simülasyonu</div>
+      </div>
+    </div>
+    <div id="progress-bar">
+      <div class="prog-dot active" id="pd1"></div>
+      <div class="prog-dot" id="pd2"></div>
+      <div class="prog-dot" id="pd3"></div>
+      <div class="prog-dot" id="pd4"></div>
+      <div class="prog-dot" id="pd5"></div>
+    </div>
+  </div>
+
+  <!-- MAIN 3D SCENE -->
+  <div id="main">
+    <canvas id="scene"></canvas>
+
+    <!-- Stage label -->
+    <div id="stage-label">Genel Bakış</div>
+
+    <!-- Info panel top-right -->
+    <div id="info-panel">
+      <h3 id="ip-title">Fotosentez Nedir?</h3>
+      <p id="ip-text">Bitkiler güneş ışığını kullanarak CO₂ ve H₂O'dan organik madde ve O₂ üretir.</p>
+      <div class="formula" id="ip-formula">6CO₂ + 6H₂O + ışık → C₆H₁₂O₆ + 6O₂</div>
+    </div>
+
+    <!-- Molecule indicators -->
+    <div id="mol-indicators"></div>
+
+    <!-- ATP / NADPH counters -->
+    <div id="molecule-counters">
+      <div class="mol-counter" id="atp-counter" style="border-color:rgba(240,192,64,0.5);color:var(--gold);background:rgba(240,192,64,0.1);">ATP: <span id="atp-val">0</span></div>
+      <div class="mol-counter" id="nadph-counter" style="border-color:rgba(164,155,254,0.5);color:var(--purple);background:rgba(164,155,254,0.1);">NADPH: <span id="nadph-val">0</span></div>
+    </div>
+
+    <!-- Experiment panel -->
+    <div id="experiment-panel">
+      <h3>🔬 Deney Kontrolleri</h3>
+      <div class="slider-group">
+        <div class="slider-label"><span>☀️ Işık</span><span id="lbl-light">70%</span></div>
+        <input type="range" min="0" max="100" value="70" id="sl-light" oninput="updateExperiment()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span>💨 CO₂</span><span id="lbl-co2">60%</span></div>
+        <input type="range" min="0" max="100" value="60" id="sl-co2" oninput="updateExperiment()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span>🌡️ Sıcaklık</span><span id="lbl-temp">25°C</span></div>
+        <input type="range" min="5" max="50" value="25" id="sl-temp" oninput="updateExperiment()">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span>💧 Su</span><span id="lbl-water">80%</span></div>
+        <input type="range" min="0" max="100" value="80" id="sl-water" oninput="updateExperiment()">
+      </div>
+      <div id="rate-display">
+        <div class="rate-val" id="rate-val">74</div>
+        <div class="rate-lbl">Fotosentez Hızı (birim/s)</div>
+      </div>
+      <canvas id="mini-chart" width="176" height="50"></canvas>
+    </div>
+
+    <!-- Popup card -->
+    <div id="popup">
+      <button id="popup-close" onclick="closePopup()">✕</button>
+      <h3 id="popup-title"></h3>
+      <p id="popup-text"></p>
+    </div>
+
+    <!-- Quiz panel -->
+    <div id="quiz-panel">
+      <h3 id="quiz-q"></h3>
+      <p id="quiz-hint"></p>
+      <div id="quiz-options"></div>
+      <div id="quiz-feedback"></div>
+      <button id="quiz-next" onclick="nextQuiz()">Devam →</button>
+    </div>
+
+    <!-- Prediction panel -->
+    <div id="prediction-panel">
+      <h3 id="pred-q"></h3>
+      <div id="pred-options"></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div id="bottom-nav">
+    <div class="nav-row">
+      <button class="nav-btn active" id="nav1" onclick="gotoSection(1)">
+        <span class="nav-icon">🌱</span>Genel Bakış
+      </button>
+      <button class="nav-btn" id="nav2" onclick="gotoSection(2)">
+        <span class="nav-icon">🔬</span>Kloroplast
+      </button>
+      <button class="nav-btn" id="nav3" onclick="gotoSection(3)">
+        <span class="nav-icon">⚡</span>Işık Tepk.
+      </button>
+      <button class="nav-btn" id="nav4" onclick="gotoSection(4)">
+        <span class="nav-icon">🔄</span>Calvin
+      </button>
+      <button class="nav-btn" id="nav5" onclick="gotoSection(5)">
+        <span class="nav-icon">🧪</span>Deney
+      </button>
+    </div>
+    <div class="ctrl-row" id="ctrl-row">
+      <button class="ctrl-btn" onclick="prevStep()">← Geri</button>
+      <button class="ctrl-btn primary" id="play-btn" onclick="togglePlay()">▶ Başlat</button>
+      <button class="ctrl-btn" onclick="nextStep()">İleri →</button>
+      <button class="ctrl-btn" onclick="resetAnim()">↺ Sıfırla</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// MAIN ENGINE
+// ============================================================
+const canvas = document.getElementById('scene');
+const ctx = canvas.getContext('2d');
+let W, H, cx, cy;
+let currentSection = 1;
+let animRunning = false;
+let animFrame = null;
+let t = 0; // global time
+let sectionT = 0; // section-local time
+let step = 0;
+let particles = [];
+let atpCount = 0, nadphCount = 0;
+let rateHistory = [];
+let rateHistMax = 30;
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  W = rect.width; H = rect.height;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(dpr, dpr);
+  cx = W / 2; cy = H / 2;
+}
+window.addEventListener('resize', () => { resize(); });
+resize();
+
+// ============================================================
+// SECTION INFO
+// ============================================================
+const sectionInfo = {
+  1: {
+    title: 'Genel Bakış',
+    ipTitle: 'Fotosentez Nedir?',
+    ipText: 'Bitkiler güneş enerjisini kullanarak CO₂ ve H₂O\'dan organik madde (C₆H₁₂O₆) ve O₂ üretir. Bu süreç yapraklardaki kloroplastlarda gerçekleşir.',
+    ipFormula: '6CO₂ + 6H₂O + ışık → C₆H₁₂O₆ + 6O₂'
+  },
+  2: {
+    title: 'Kloroplastın İç Yapısı',
+    ipTitle: 'Kloroplast',
+    ipText: 'Kloroplast, bitkinin enerji fabrikasıdır. Dış zar, iç zar, stroma ve tilakoit yapılarından oluşur. Işığa bağlı tepkimeler tilakoitte, Calvin döngüsü stromada gerçekleşir.',
+    ipFormula: 'Tilakoit zarı → Işık tepkimeleri | Stroma → Calvin döngüsü'
+  },
+  3: {
+    title: 'Işığa Bağlı Tepkimeler',
+    ipTitle: 'Tilakoit Zarında',
+    ipText: 'Fotosistem II\'de su parçalanır, O₂ açığa çıkar. Elektronlar elektron taşıma zincirinden geçer. ATP sentaz ATP üretir. Fotosistem I\'de NADPH oluşur.',
+    ipFormula: '2H₂O → O₂ + 4H⁺ + 4e⁻ | ADP + Pi → ATP | NADP⁺ + H⁺ → NADPH'
+  },
+  4: {
+    title: 'Calvin Döngüsü',
+    ipTitle: 'Stromada Karbon Fiksasyonu',
+    ipText: 'CO₂, Rubisco enzimi ile RuBP\'ye bağlanır. ATP ve NADPH kullanılarak G3P oluşur. G3P, glikoz ve diğer organik moleküllerin yapı taşıdır.',
+    ipFormula: 'CO₂ + RuBP → 2×3-PGA → G3P | 3CO₂ → 1 net G3P'
+  },
+  5: {
+    title: 'Sonuçlar ve Deney',
+    ipTitle: 'Sınırlayıcı Faktörler',
+    ipText: 'Işık, CO₂, sıcaklık ve su miktarı fotosentez hızını etkiler. Bir faktör yetersizse diğerlerini artırmak hızı yükseltmez (Liebig\'in minimumlar yasası).',
+    ipFormula: 'Hız = f(ışık, CO₂, T, H₂O) — en düşük faktör sınırlar'
+  }
+};
+
+// ============================================================
+// PARTICLE SYSTEM
+// ============================================================
+function createParticle(x, y, vx, vy, color, label, life, size) {
+  return { x, y, vx, vy, color, label, life, maxLife: life, size: size || 5, alpha: 1 };
+}
+
+function updateParticles() {
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life--;
+    p.alpha = Math.min(1, p.life / 20);
+  });
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    ctx.save();
+    ctx.globalAlpha = p.alpha;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    if (p.label && p.life > 30) {
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 9px system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowBlur = 0;
+      ctx.fillText(p.label, p.x, p.y);
+    }
+    ctx.restore();
+  });
+}
+
+// ============================================================
+// DRAWING UTILITIES
+// ============================================================
+function drawGradCircle(x, y, r, c1, c2, alpha) {
+  const g = ctx.createRadialGradient(x - r*0.3, y - r*0.3, r*0.1, x, y, r);
+  g.addColorStop(0, c1);
+  g.addColorStop(1, c2);
+  ctx.globalAlpha = alpha || 1;
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function drawEllipse3D(x, y, rx, ry, color1, color2, border, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha || 1;
+  const g = ctx.createRadialGradient(x - rx*0.3, y - ry*0.3, rx*0.05, x, y, rx);
+  g.addColorStop(0, color1);
+  g.addColorStop(1, color2);
+  ctx.fillStyle = g;
+  ctx.strokeStyle = border || 'rgba(255,255,255,0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function glowText(txt, x, y, color, size, align) {
+  ctx.save();
+  ctx.font = `bold ${size || 13}px -apple-system,system-ui,sans-serif`;
+  ctx.textAlign = align || 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = color;
+  ctx.fillText(txt, x, y);
+  ctx.restore();
+}
+
+function label(txt, x, y, color, size) {
+  ctx.save();
+  ctx.font = `${size || 11}px -apple-system,system-ui,sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = color || 'rgba(255,255,255,0.8)';
+  ctx.fillText(txt, x, y);
+  ctx.restore();
+}
+
+function arrow(x1, y1, x2, y2, color, width) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.sqrt(dx*dx + dy*dy);
+  const ux = dx/len, uy = dy/len;
+  const hw = 8, hl = 10;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = width || 1.5;
+  ctx.globalAlpha = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2 - ux*hl, y2 - uy*hl);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - ux*hl - uy*hw, y2 - uy*hl + ux*hw);
+  ctx.lineTo(x2 - ux*hl + uy*hw, y2 - uy*hl - ux*hw);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+// ============================================================
+// SECTION 1 — OVERVIEW (Doğal 3D Bitki Sahnesi)
+// ============================================================
+let s1Mols = [];
+let s1Active = { light: true, co2: false, water: false, oxygen: false, glucose: false };
+
+function initSection1() {
+  s1Mols = [];
+  document.getElementById('mol-indicators').innerHTML = '';
+  const molData = [
+    { id: 'light', label: '☀️ Işık', color: '#f0c040', bg: 'rgba(240,192,64,0.15)', border: 'rgba(240,192,64,0.5)' },
+    { id: 'co2', label: 'CO₂', color: '#4ab8ff', bg: 'rgba(74,184,255,0.15)', border: 'rgba(74,184,255,0.5)' },
+    { id: 'water', label: 'H₂O', color: '#00c9a7', bg: 'rgba(0,201,167,0.15)', border: 'rgba(0,201,167,0.5)' },
+    { id: 'oxygen', label: 'O₂', color: '#3dd668', bg: 'rgba(61,214,104,0.15)', border: 'rgba(61,214,104,0.5)' },
+    { id: 'glucose', label: 'C₆H₁₂O₆', color: '#ff9f43', bg: 'rgba(255,159,67,0.15)', border: 'rgba(255,159,67,0.5)' }
+  ];
+  const container = document.getElementById('mol-indicators');
+  molData.forEach(m => {
+    const el = document.createElement('div');
+    el.className = 'mol-ind';
+    el.id = 'mi-' + m.id;
+    el.style.color = m.color;
+    el.style.background = m.bg;
+    el.style.borderColor = m.border;
+    el.style.opacity = s1Active[m.id] ? '1' : '0.4';
+    el.innerHTML = m.label;
+    el.onclick = () => {
+      s1Active[m.id] = !s1Active[m.id];
+      el.style.opacity = s1Active[m.id] ? '1' : '0.4';
+      showMolInfo(m.id);
+    };
+    container.appendChild(el);
+  });
+}
+
+const molInfoData = {
+  light: { title: '☀️ Işık Enerjisi', text: 'Güneşten gelen ışık enerjisi kloroplasttaki klorofil pigmentleri tarafından soğurulur. Bu enerji kimyasal enerjiye (ATP ve NADPH) dönüştürülür. Görünür ışığın kırmızı ve mavi dalga boyları en verimli şekilde kullanılır.' },
+  co2: { title: '💨 Karbondioksit (CO₂)', text: 'CO₂, yapraklardaki stoma açıklıklarından girer. Kloroplastın stromasında Rubisco enzimi tarafından tutulur. Her döngüde 3 CO₂ molekülü kullanılarak RuBP\'ye bağlanır.' },
+  water: { title: '💧 Su (H₂O)', text: 'Su, köklerden iletim demetleri aracılığıyla yapraklara taşınır. Tilakoitte fotosistem II tarafından parçalanır. Açığa çıkan elektronlar elektron taşıma zincirine, protonlar ATP sentezine, oksijen atmosfere verilir.' },
+  oxygen: { title: '🟢 Oksijen (O₂)', text: 'Fotosentezin yan ürünüdür. Işığa bağlı tepkimelerde suyun (H₂O) fotolizi sırasında açığa çıkar. Stomalardan atmosfere salınır. Atmosferdeki oksijenin tamamına yakını fotosentez kaynaklıdır.' },
+  glucose: { title: '🟠 Glikoz (C₆H₁₂O₆)', text: 'Calvin döngüsünün temel ürünü G3P\'den sentezlenir. Bitkinin solunumunda enerji kaynağı, hücre duvarı (selüloz) yapısında, nişasta olarak depolanmasında kullanılır. Besin zincirindeki enerji akışını başlatır.' }
+};
+
+function showMolInfo(id) {
+  const d = molInfoData[id];
+  if (!d) return;
+  document.getElementById('popup-title').textContent = d.title;
+  document.getElementById('popup-text').textContent = d.text;
+  document.getElementById('popup').classList.add('show');
+}
+
+function closePopup() { document.getElementById('popup').classList.remove('show'); }
+
+// Section 1 render — doğal bitki sahnesi
+function renderSection1() {
+  // Sky gradient
+  const sky = ctx.createLinearGradient(0, 0, 0, H * 0.65);
+  sky.addColorStop(0, '#0a2a4a');
+  sky.addColorStop(0.5, '#0d3520');
+  sky.addColorStop(1, '#0a1a0f');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  const s = Math.min(W, H) / 400;
+
+  // === SUN ===
+  if (s1Active.light) {
+    const sx = W * 0.75, sy = H * 0.12;
+    const pulse = 1 + 0.05 * Math.sin(t * 0.03);
+    // Outer glow rings
+    for (let i = 3; i >= 0; i--) {
+      ctx.globalAlpha = 0.04 + i * 0.02;
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath();
+      ctx.arc(sx, sy, (55 + i * 20) * s * pulse, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // Sun body
+    drawGradCircle(sx, sy, 28 * s * pulse, '#fffde7', '#f9a825', 1);
+    // Light rays
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2 + t * 0.008;
+      const r1 = 32 * s, r2 = 48 * s;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,215,0,0.3)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(sx + Math.cos(angle) * r1, sy + Math.sin(angle) * r1);
+      ctx.lineTo(sx + Math.cos(angle) * r2, sy + Math.sin(angle) * r2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    // Light beam to leaf
+    const lx = cx - 20 * s, ly = cy - 40 * s;
+    const beamAlpha = 0.1 + 0.05 * Math.sin(t * 0.04);
+    ctx.save();
+    ctx.globalAlpha = beamAlpha;
+    const bg = ctx.createLinearGradient(sx, sy, lx, ly);
+    bg.addColorStop(0, 'rgba(255,220,0,0.6)');
+    bg.addColorStop(1, 'rgba(255,220,0,0)');
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.moveTo(sx - 15, sy);
+    ctx.lineTo(sx + 15, sy);
+    ctx.lineTo(lx + 30, ly);
+    ctx.lineTo(lx - 30, ly);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    // Photon particles
+    if (Math.random() < 0.15) {
+      const ang = -0.8 + Math.random() * 0.4;
+      particles.push(createParticle(sx, sy, Math.cos(ang) * 2.5, Math.sin(ang) * 2, '#ffd700', '✦', 60, 3));
+    }
+  }
+
+  // === SOIL ===
+  const soilY = H * 0.78;
+  const soil = ctx.createLinearGradient(0, soilY, 0, H);
+  soil.addColorStop(0, '#2d1b0e');
+  soil.addColorStop(0.3, '#3d2510');
+  soil.addColorStop(1, '#1a0d06');
+  ctx.fillStyle = soil;
+  ctx.beginPath();
+  ctx.moveTo(0, soilY);
+  ctx.bezierCurveTo(W*0.2, soilY - 8, W*0.5, soilY + 5, W*0.8, soilY - 3);
+  ctx.lineTo(W, soilY);
+  ctx.lineTo(W, H);
+  ctx.lineTo(0, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Soil texture
+  ctx.save();
+  ctx.globalAlpha = 0.15;
+  for (let i = 0; i < 20; i++) {
+    ctx.fillStyle = '#5a3a20';
+    ctx.beginPath();
+    ctx.ellipse(W * (0.05 + i * 0.048), soilY + 8 + (i%3)*6, 5, 3, Math.random() * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // === STEM ===
+  const stemX = cx;
+  const stemTop = cy + 20 * s;
+  ctx.save();
+  ctx.lineWidth = 10 * s;
+  const stg = ctx.createLinearGradient(stemX - 5, 0, stemX + 5, 0);
+  stg.addColorStop(0, '#1a5c20');
+  stg.addColorStop(0.5, '#2aaa40');
+  stg.addColorStop(1, '#154d1a');
+  ctx.strokeStyle = stg;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(stemX, soilY - 2);
+  ctx.bezierCurveTo(stemX - 15, soilY - 80, stemX + 10, stemTop + 100, stemX, stemTop);
+  ctx.stroke();
+  ctx.restore();
+
+  // === ROOTS ===
+  if (s1Active.water) {
+    ctx.save();
+    const drawRoot = (sx, sy, angle, depth) => {
+      if (depth <= 0) return;
+      const ex = sx + Math.cos(angle) * 35 * s * (0.8 ** (4 - depth));
+      const ey = sy + Math.abs(Math.sin(angle)) * 30 * s * (0.8 ** (4 - depth)) + 10;
+      const rootAlpha = 0.3 + 0.2 * Math.sin(t * 0.05 + depth);
+      ctx.globalAlpha = rootAlpha;
+      ctx.strokeStyle = `hsl(${160 + depth * 10}, 60%, ${35 + depth * 5}%)`;
+      ctx.lineWidth = depth * 1.5 * s;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.quadraticCurveTo((sx + ex) / 2 + 10, (sy + ey) / 2, ex, ey);
+      ctx.stroke();
+      if (depth > 1) {
+        drawRoot(ex, ey, angle + 0.5, depth - 1);
+        drawRoot(ex, ey, angle - 0.3, depth - 1);
+      }
+    };
+    for (let i = -2; i <= 2; i++) {
+      drawRoot(stemX + i * 8, soilY + 5, Math.PI / 2 + i * 0.3, 3);
+    }
+    ctx.restore();
+    // Water particles rising
+    if (Math.random() < 0.1) {
+      particles.push(createParticle(
+        stemX + (Math.random() - 0.5) * 10,
+        soilY - 5,
+        (Math.random() - 0.5) * 0.3,
+        -1.2 - Math.random(),
+        '#00c9a7',
+        'H₂O',
+        80,
+        4
+      ));
+    }
+  }
+
+  // === MAIN LEAF (large) ===
+  drawLeaf3D(cx - 10 * s, cy - 60 * s, 80 * s, -0.3, t);
+
+  // === SIDE LEAVES ===
+  drawLeaf3D(cx - 80 * s, cy + 10 * s, 55 * s, -0.8, t + 1);
+  drawLeaf3D(cx + 80 * s, cy - 20 * s, 50 * s, 0.5, t + 2);
+  drawLeaf3D(cx - 50 * s, cy - 80 * s, 40 * s, -0.5, t + 3);
+
+  // === CO2 particles ===
+  if (s1Active.co2) {
+    if (Math.random() < 0.08) {
+      const side = Math.random() > 0.5 ? 1 : -1;
+      particles.push(createParticle(
+        cx + side * (W * 0.3 + Math.random() * 50),
+        cy - 50 + (Math.random() - 0.5) * 80,
+        side * (-1.5 - Math.random()),
+        (Math.random() - 0.5) * 0.5,
+        '#4ab8ff', 'CO₂', 100, 5
+      ));
+    }
+  }
+
+  // === O2 particles ===
+  if (s1Active.oxygen) {
+    if (Math.random() < 0.06) {
+      particles.push(createParticle(
+        cx + (Math.random() - 0.5) * 60,
+        cy - 60 + (Math.random() - 0.5) * 40,
+        (Math.random() - 0.5) * 2,
+        -2 - Math.random(),
+        '#3dd668', 'O₂', 90, 5
+      ));
+    }
+  }
+
+  // === Glucose glow on leaf ===
+  if (s1Active.glucose) {
+    const gx = cx - 10 * s, gy = cy - 60 * s;
+    ctx.save();
+    ctx.globalAlpha = 0.3 + 0.2 * Math.sin(t * 0.05);
+    ctx.fillStyle = '#ff9f43';
+    ctx.shadowColor = '#ff9f43';
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.arc(gx, gy, 25 * s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    if (Math.random() < 0.04) {
+      particles.push(createParticle(gx + (Math.random()-0.5)*30, gy + (Math.random()-0.5)*20, (Math.random()-0.5)*2, -1.5, '#ff9f43', 'G', 70, 4));
+    }
+  }
+
+  // === Main equation ===
+  const eqY = H * 0.92;
+  ctx.save();
+  ctx.font = `bold ${12 * s}px system-ui`;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText('6CO₂ + 6H₂O + ışık  →  C₆H₁₂O₆ + 6O₂', cx, eqY);
+  ctx.restore();
+}
+
+function drawLeaf3D(lx, ly, size, angle, time) {
+  ctx.save();
+  ctx.translate(lx, ly);
+  ctx.rotate(angle + 0.03 * Math.sin(time * 0.02));
+
+  // Leaf shadow
+  ctx.save();
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = '#000';
+  ctx.scale(1, 0.3);
+  ctx.beginPath();
+  ctx.ellipse(5, size * 0.6 + 20, size * 0.55, size * 0.3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Leaf body gradient
+  const lg = ctx.createLinearGradient(-size * 0.5, 0, size * 0.5, size);
+  lg.addColorStop(0, '#2aaa45');
+  lg.addColorStop(0.4, '#1d8a35');
+  lg.addColorStop(0.7, '#1a7a2e');
+  lg.addColorStop(1, '#0f4a1e');
+
+  ctx.fillStyle = lg;
+  ctx.strokeStyle = 'rgba(10,50,20,0.6)';
+  ctx.lineWidth = 1;
+
+  // Leaf shape
+  ctx.beginPath();
+  ctx.moveTo(0, -size * 0.05);
+  ctx.bezierCurveTo(size * 0.5, -size * 0.15, size * 0.6, size * 0.4, size * 0.1, size);
+  ctx.bezierCurveTo(-size * 0.05, size * 0.9, -size * 0.6, size * 0.8, -size * 0.5, size * 0.3);
+  ctx.bezierCurveTo(-size * 0.55, 0, -size * 0.1, -size * 0.08, 0, -size * 0.05);
+  ctx.fill();
+  ctx.stroke();
+
+  // Leaf highlight
+  ctx.save();
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle = '#90ee90';
+  ctx.beginPath();
+  ctx.moveTo(0, -size * 0.05);
+  ctx.bezierCurveTo(size * 0.25, size * 0.1, size * 0.3, size * 0.35, size * 0.05, size * 0.5);
+  ctx.bezierCurveTo(-size * 0.1, size * 0.4, -size * 0.1, size * 0.1, 0, -size * 0.05);
+  ctx.fill();
+  ctx.restore();
+
+  // Central vein
+  ctx.strokeStyle = 'rgba(10,50,20,0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0, -size * 0.02);
+  ctx.quadraticCurveTo(size * 0.05, size * 0.5, size * 0.05, size * 0.95);
+  ctx.stroke();
+
+  // Side veins
+  ctx.lineWidth = 0.7;
+  ctx.strokeStyle = 'rgba(10,50,20,0.3)';
+  for (let i = 0; i < 5; i++) {
+    const yp = size * (0.1 + i * 0.15);
+    const side = (i % 2 === 0) ? 1 : -1;
+    ctx.beginPath();
+    ctx.moveTo(size * 0.04, yp);
+    ctx.quadraticCurveTo(size * side * 0.25, yp + size * 0.05, size * side * 0.4, yp + size * 0.03);
+    ctx.stroke();
+  }
+
+  // Stoma dots (tiny pores)
+  ctx.save();
+  ctx.globalAlpha = 0.2;
+  ctx.fillStyle = '#0a2a10';
+  for (let i = 0; i < 8; i++) {
+    const sx = (Math.random() - 0.5) * size * 0.7;
+    const sy2 = size * (0.2 + Math.random() * 0.6);
+    ctx.beginPath();
+    ctx.ellipse(sx, sy2, 2, 1, Math.random() * Math.PI, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  ctx.restore();
+}
+
+// ============================================================
+// SECTION 2 — CHLOROPLAST
+// ============================================================
+let s2Selected = null;
+const chloroplastParts = [
+  { id: 'outer', name: 'Dış Zar', desc: 'Kloroplastı çevreleyen dış zarfı oluşturur. Küçük moleküllere geçirgendir. Kloroplastı sitoplazmadan ayırır.', color: '#2aaa55', x: 0, y: 0, rx: 1.0, ry: 0.62 },
+  { id: 'inner', name: 'İç Zar', desc: 'Seçici geçirgen özellik taşır. Stroma ile dış ortam arasındaki madde geçişini kontrol eder. İkinci koruyucu katmandır.', color: '#3dd668', x: 0, y: 0, rx: 0.88, ry: 0.52 },
+  { id: 'stroma', name: 'Stroma', desc: 'İç zarı dolduran sulu ortamdır. Calvin döngüsü tepkimeleri burada gerçekleşir. Rubisco enzimi ve diğer enzimleri içerir.', color: '#1a6a3a', x: 0, y: 0, rx: 0.85, ry: 0.50 },
+  { id: 'thylakoid', name: 'Tilakoit Zarı', desc: 'İçiçe geçmiş zar sistemidir. Klorofil burada bulunur. Işığa bağlı tepkimelerin gerçekleştiği yerdir. Fotosistemler bu zarda yerleşmiştir.', color: '#00c9a7', x: 0, y: 0, rx: 0, ry: 0 },
+  { id: 'granum', name: 'Granum', desc: 'Üst üste dizilmiş tilakoit yığınlarıdır. Her granum 10-20 tilakoit diskinden oluşabilir. Işık soğurma yüzeyini artırır.', color: '#00e6c0', x: 0, y: 0, rx: 0, ry: 0 },
+];
+
+function renderSection2() {
+  // Deep space background
+  const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H));
+  bg.addColorStop(0, '#0d2a18');
+  bg.addColorStop(1, '#050e08');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  const s = Math.min(W, H) / 500;
+  const crx = W * 0.42 * s, cry = H * 0.38 * s;
+  const cpx = cx - 10, cpy = cy - 10;
+
+  // === OUTER MEMBRANE ===
+  const outerGlow = (s2Selected === 'outer') ? 20 : 5;
+  ctx.save();
+  ctx.shadowColor = '#2aaa55';
+  ctx.shadowBlur = outerGlow;
+  const og = ctx.createRadialGradient(cpx - crx * 0.3, cpy - cry * 0.3, crx * 0.1, cpx, cpy, crx);
+  og.addColorStop(0, 'rgba(30,80,50,0.6)');
+  og.addColorStop(0.6, 'rgba(20,60,35,0.7)');
+  og.addColorStop(1, 'rgba(10,30,20,0.9)');
+  ctx.fillStyle = og;
+  ctx.strokeStyle = (s2Selected === 'outer') ? '#3dd668' : 'rgba(42,170,85,0.5)';
+  ctx.lineWidth = (s2Selected === 'outer') ? 3 : 2;
+  ctx.beginPath();
+  ctx.ellipse(cpx, cpy, crx, cry, -0.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+
+  // === INNER MEMBRANE ===
+  ctx.save();
+  ctx.shadowColor = '#3dd668';
+  ctx.shadowBlur = (s2Selected === 'inner') ? 15 : 3;
+  ctx.strokeStyle = (s2Selected === 'inner') ? '#7fffd4' : 'rgba(61,214,104,0.4)';
+  ctx.lineWidth = (s2Selected === 'inner') ? 2.5 : 1.5;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.ellipse(cpx, cpy, crx * 0.88, cry * 0.88, -0.1, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+
+  // === STROMA background fill ===
+  const sg = ctx.createRadialGradient(cpx, cpy, 0, cpx, cpy, crx * 0.85);
+  sg.addColorStop(0, 'rgba(15,50,25,0.8)');
+  sg.addColorStop(1, 'rgba(8,30,15,0.9)');
+  ctx.fillStyle = sg;
+  ctx.beginPath();
+  ctx.ellipse(cpx, cpy, crx * 0.86, cry * 0.86, -0.1, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Stroma label
+  if (s2Selected === 'stroma' || s2Selected === null) {
+    ctx.save();
+    ctx.globalAlpha = 0.4;
+    ctx.font = '11px system-ui';
+    ctx.fillStyle = '#a8d5b0';
+    ctx.textAlign = 'center';
+    ctx.fillText('STROMA', cpx - crx * 0.4, cpy + cry * 0.5);
+    ctx.restore();
+  }
+
+  // === GRANA (tilakoit yığınları) ===
+  const granaPositions = [
+    { x: cpx - crx * 0.35, y: cpy - cry * 0.1 },
+    { x: cpx + crx * 0.1, y: cpy - cry * 0.2 },
+    { x: cpx + crx * 0.4, y: cpy + cry * 0.1 },
+    { x: cpx - crx * 0.05, y: cpy + cry * 0.25 },
+    { x: cpx - crx * 0.5, y: cpy + cry * 0.2 },
+  ];
+
+  granaPositions.forEach((gp, gi) => {
+    const isSel = (s2Selected === 'granum' || s2Selected === 'thylakoid');
+    const diskCount = 4 + (gi % 3);
+    const diskW = 32 * s, diskH = 7 * s;
+    const gap = 9 * s;
+
+    // Stacked disks
+    for (let d = 0; d < diskCount; d++) {
+      const dy = gp.y - (diskCount / 2 - d) * gap;
+      const pulse = isSel ? (1 + 0.05 * Math.sin(t * 0.04 + d * 0.5)) : 1;
+      ctx.save();
+      ctx.shadowColor = '#00c9a7';
+      ctx.shadowBlur = isSel ? 12 : 4;
+      const dg = ctx.createLinearGradient(gp.x - diskW, dy, gp.x + diskW, dy);
+      dg.addColorStop(0, '#00a080');
+      dg.addColorStop(0.4, '#00e6c0');
+      dg.addColorStop(0.6, '#00c9a7');
+      dg.addColorStop(1, '#007860');
+      ctx.fillStyle = dg;
+      ctx.strokeStyle = isSel ? '#7fffd4' : 'rgba(0,201,167,0.4)';
+      ctx.lineWidth = isSel ? 1.5 : 0.8;
+      ctx.beginPath();
+      ctx.ellipse(gp.x, dy, diskW * pulse, diskH * 0.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      // Disk edge highlight
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      ctx.strokeStyle = '#7fffd4';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(gp.x, dy - diskH * 0.15, diskW * 0.8 * pulse, diskH * 0.25, 0, Math.PI, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Granum label
+    if (isSel || gi === 0) {
+      label(`Granum ${gi + 1}`, gp.x, gp.y - (diskCount / 2 + 1) * gap - 8, '#00e6c0', 9);
+    }
+  });
+
+  // === STROMA LAMELLAE (connecting lines between grana) ===
+  ctx.save();
+  ctx.globalAlpha = 0.2;
+  ctx.strokeStyle = '#00c9a7';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 5]);
+  for (let i = 0; i < granaPositions.length - 1; i++) {
+    ctx.beginPath();
+    ctx.moveTo(granaPositions[i].x + 15, granaPositions[i].y);
+    ctx.bezierCurveTo(
+      granaPositions[i].x + 30, granaPositions[i].y,
+      granaPositions[i + 1].x - 30, granaPositions[i + 1].y,
+      granaPositions[i + 1].x - 15, granaPositions[i + 1].y
+    );
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // === LABELS on the right ===
+  const labelsX = cpx + crx + 30;
+  const partsList = [
+    { name: 'Dış Zar', y: cpy - cry * 0.85, color: '#2aaa55', id: 'outer' },
+    { name: 'İç Zar', y: cpy - cry * 0.55, color: '#3dd668', id: 'inner' },
+    { name: 'Stroma', y: cpy - cry * 0.1, color: '#6aaa78', id: 'stroma' },
+    { name: 'Tilakoit Zarı', y: cpy + cry * 0.2, color: '#00c9a7', id: 'thylakoid' },
+    { name: 'Granum', y: cpy + cry * 0.5, color: '#00e6c0', id: 'granum' },
+  ];
+
+  partsList.forEach(pl => {
+    if (labelsX + 80 > W) return;
+    const isSelected = s2Selected === pl.id;
+    ctx.save();
+    ctx.globalAlpha = isSelected ? 1 : 0.7;
+    ctx.strokeStyle = pl.color;
+    ctx.lineWidth = isSelected ? 1.5 : 0.8;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(cpx + crx * 0.85, pl.y);
+    ctx.lineTo(labelsX - 5, pl.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    ctx.save();
+    ctx.font = `${isSelected ? 'bold ' : ''}11px system-ui`;
+    ctx.fillStyle = pl.color;
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = isSelected ? 1 : 0.7;
+    ctx.fillText(pl.name, labelsX, pl.y);
+    ctx.restore();
+  });
+
+  // === Click zones (invisible but tracked) ===
+  // We track click via canvas click event set in initSection2
+}
+
+function initSection2() {
+  s2Selected = null;
+  document.getElementById('mol-indicators').innerHTML = '';
+  canvas.onclick = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left);
+    const my = (e.clientY - rect.top);
+    handleSection2Click(mx, my);
+  };
+}
+
+function handleSection2Click(mx, my) {
+  const s = Math.min(W, H) / 500;
+  const crx = W * 0.42 * s, cry = H * 0.38 * s;
+  const cpx = cx - 10, cpy = cy - 10;
+
+  const dx = (mx - cpx) / crx;
+  const dy = (my - cpy) / cry;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+
+  if (dist > 1.0) { s2Selected = null; return; }
+  if (dist > 0.85) { s2Selected = 'outer'; }
+  else if (dist > 0.78) { s2Selected = 'inner'; }
+  else {
+    // Check if near a granum
+    const granaPositions = [
+      { x: cpx - crx * 0.35, y: cpy - cry * 0.1 },
+      { x: cpx + crx * 0.1, y: cpy - cry * 0.2 },
+      { x: cpx + crx * 0.4, y: cpy + cry * 0.1 },
+      { x: cpx - crx * 0.05, y: cpy + cry * 0.25 },
+      { x: cpx - crx * 0.5, y: cpy + cry * 0.2 },
+    ];
+    let nearGranum = false;
+    for (const gp of granaPositions) {
+      const gdx = mx - gp.x, gdy = my - gp.y;
+      if (Math.sqrt(gdx*gdx + gdy*gdy) < 40 * s) { nearGranum = true; break; }
+    }
+    s2Selected = nearGranum ? 'granum' : 'stroma';
+  }
+
+  const part = chloroplastParts.find(p => p.id === s2Selected);
+  if (part) {
+    document.getElementById('popup-title').textContent = part.name;
+    document.getElementById('popup-text').textContent = part.desc;
+    document.getElementById('popup').classList.add('show');
+  }
+}
+
+// ============================================================
+// SECTION 3 — LIGHT REACTIONS
+// ============================================================
+let s3Step = 0;
+let s3Playing = false;
+let s3StepT = 0;
+const s3MaxSteps = 8;
+const s3StepData = [
+  { title: 'Işık soğurulur', desc: 'Fotosistem II (PSII) klorofilleri güneş ışığını yakalar. Enerji kazanan elektronlar uyarılmış hale geçer.', atp: 0, nadph: 0 },
+  { title: 'Suyun oksidasyonu', desc: 'PSII enzimleri su moleküllerini parçalar: 2H₂O → O₂ + 4H⁺ + 4e⁻. Açığa çıkan oksijen stomalardan dışarı verilir.', atp: 0, nadph: 0 },
+  { title: 'Elektron taşıma zinciri', desc: 'Yüksek enerjili elektronlar plastoquinon, sitokrom b6f ve plastosiyainin arasından aktarılır.', atp: 0, nadph: 0 },
+  { title: 'Proton gradyanı', desc: 'Elektron taşıma sırasında protonlar (H⁺) tilakoit lümenine pompalanır. Yoğunluk farkı oluşur.', atp: 0, nadph: 0 },
+  { title: 'ATP sentezi', desc: 'Protonlar ATP sentaz enziminden akarken ADP + Pi → ATP dönüşümü gerçekleşir.', atp: 2, nadph: 0 },
+  { title: 'Fotosistem I', desc: 'Plastosiyainden gelen elektronlar PSI\'de yeniden ışıkla uyarılır.', atp: 2, nadph: 0 },
+  { title: 'NADPH üretimi', desc: 'Uyarılan elektronlar ferredoksin ve NADP+ redüktaz aracılığıyla NADP+\'yu NADPH\'ya indirger.', atp: 2, nadph: 2 },
+  { title: 'Calvin döngüsüne hazır', desc: 'ATP ve NADPH stromaya geçer. Calvin döngüsü bu enerji taşıyıcılarını kullanarak CO₂\'yi bağlar.', atp: 2, nadph: 2 },
+];
+
+function initSection3() {
+  s3Step = 0;
+  s3Playing = false;
+  s3StepT = 0;
+  atpCount = 0;
+  nadphCount = 0;
+  updateCounters();
+  document.getElementById('mol-indicators').innerHTML = '';
+  canvas.onclick = null;
+  document.getElementById('atp-counter').style.display = 'flex';
+  document.getElementById('nadph-counter').style.display = 'flex';
+}
+
+function updateCounters() {
+  document.getElementById('atp-val').textContent = atpCount;
+  document.getElementById('nadph-val').textContent = nadphCount;
+}
+
+function renderSection3() {
+  // Tilakoit membrane view
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#051510');
+  bg.addColorStop(0.5, '#0a2018');
+  bg.addColorStop(1, '#051510');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  const s = Math.min(W, H) / 500;
+  const memY = cy;
+  const memH = 50 * s;
+
+  // === TILAKOIT MEMBRANE ===
+  // Upper membrane
+  const mg1 = ctx.createLinearGradient(0, memY - memH, 0, memY);
+  mg1.addColorStop(0, '#004040');
+  mg1.addColorStop(0.5, '#006060');
+  mg1.addColorStop(1, '#008080');
+  ctx.fillStyle = mg1;
+  ctx.fillRect(0, memY - memH, W, memH);
+
+  // Lower membrane
+  const mg2 = ctx.createLinearGradient(0, memY, 0, memY + memH);
+  mg2.addColorStop(0, '#008080');
+  mg2.addColorStop(0.5, '#006060');
+  mg2.addColorStop(1, '#004040');
+  ctx.fillStyle = mg2;
+  ctx.fillRect(0, memY, W, memH);
+
+  // Membrane sheen
+  ctx.save();
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = '#00e6c0';
+  ctx.fillRect(0, memY - 3, W, 6);
+  ctx.restore();
+
+  // Lumen label
+  glowText('← TİLAKOİT LÜMEN →', cx, memY, '#00c9a7', 10);
+  label('STROMA (üst)', cx, memY - memH - 15, '#a8d5b0', 9);
+  label('STROMA (alt)', cx, memY + memH + 15, '#a8d5b0', 9);
+
+  // === PHOTOSYSTEM II ===
+  const ps2X = W * 0.22;
+  drawPhotosystem(ps2X, memY, 'PS II', '#ffd700', s, s3Step);
+
+  // === ELECTRON TRANSPORT CHAIN ===
+  const etcX = W * 0.45;
+  drawETC(etcX, memY, s, s3Step);
+
+  // === ATP SYNTHASE ===
+  const atpX = W * 0.62;
+  drawATPSynthase(atpX, memY, s, s3Step);
+
+  // === PHOTOSYSTEM I ===
+  const ps1X = W * 0.80;
+  drawPhotosystem(ps1X, memY, 'PS I', '#00c9a7', s, s3Step, true);
+
+  // === ELECTRON FLOW ===
+  if (s3Step >= 2) {
+    drawElectronFlow(ps2X, etcX, atpX, ps1X, memY, s);
+  }
+
+  // === PROTON ARROWS ===
+  if (s3Step >= 3) {
+    drawProtonFlow(etcX, memY, s);
+  }
+
+  // === O2 release ===
+  if (s3Step >= 1) {
+    const o2Y = memY - memH - 30;
+    if (Math.random() < 0.08) {
+      particles.push(createParticle(ps2X + (Math.random()-0.5)*20, o2Y, (Math.random()-0.5)*2, -2, '#3dd668', 'O₂', 70, 5));
+    }
+    glowText('O₂ ↑', ps2X - 40, o2Y, '#3dd668', 10);
+  }
+
+  // === NADPH label ===
+  if (s3Step >= 6) {
+    glowText('NADPH', ps1X + 50, memY - memH - 20, '#a29bfe', 11);
+  }
+
+  // === Step info box ===
+  const sd = s3StepData[s3Step];
+  drawStepBox(sd, s);
+
+  s3StepT++;
+  if (s3Playing && s3StepT > 120) {
+    s3StepT = 0;
+    if (s3Step < s3MaxSteps - 1) {
+      s3Step++;
+      atpCount = s3StepData[s3Step].atp;
+      nadphCount = s3StepData[s3Step].nadph;
+      updateCounters();
+    } else {
+      s3Playing = false;
+      showSection3Quiz();
+    }
+  }
+}
+
+function drawPhotosystem(x, memY, name, color, s, step, isPS1) {
+  const isActive = isPS1 ? (step >= 5) : (step >= 0);
+  ctx.save();
+  if (isActive) { ctx.shadowColor = color; ctx.shadowBlur = 15; }
+  const pg = ctx.createLinearGradient(x - 25*s, memY - 30*s, x + 25*s, memY + 30*s);
+  pg.addColorStop(0, isActive ? color + 'aa' : '#334433');
+  pg.addColorStop(1, isActive ? color + '44' : '#223322');
+  ctx.fillStyle = pg;
+  ctx.strokeStyle = isActive ? color : 'rgba(255,255,255,0.2)';
+  ctx.lineWidth = isActive ? 2 : 1;
+  // Cylinder shape
+  ctx.beginPath();
+  ctx.ellipse(x, memY - 25*s, 20*s, 8*s, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillRect(x - 20*s, memY - 25*s, 40*s, 50*s);
+  ctx.beginPath();
+  ctx.ellipse(x, memY + 25*s, 20*s, 8*s, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+
+  // Label
+  ctx.save();
+  ctx.font = `bold ${10*s}px system-ui`;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = isActive ? color : '#6aaa78';
+  ctx.fillText(name, x, memY + 42*s);
+  ctx.restore();
+
+  // Light absorption
+  if ((isPS1 && step >= 5) || (!isPS1 && step >= 0)) {
+    const lightAng = isPS1 ? -0.8 : -0.5;
+    for (let i = 0; i < 3; i++) {
+      const off = (t * 0.03 + i * 0.5) % 1;
+      const lx = x + Math.cos(lightAng) * 60 * s * off;
+      const ly = (memY - 40*s) + Math.sin(lightAng) * 60 * s * off;
+      ctx.save();
+      ctx.globalAlpha = 1 - off;
+      ctx.fillStyle = '#ffd700';
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(lx, ly, 3*s, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+function drawETC(x, memY, s, step) {
+  if (step < 2) return;
+  ctx.save();
+  ctx.shadowColor = '#ff9f43';
+  ctx.shadowBlur = 10;
+  // Plastoquinone
+  ctx.fillStyle = '#ff9f43';
+  ctx.beginPath();
+  ctx.rect(x - 15*s, memY - 10*s, 30*s, 20*s);
+  ctx.fill();
+  label('PQ', x, memY, '#fff', 9);
+  ctx.restore();
+}
+
+function drawATPSynthase(x, memY, s, step) {
+  if (step < 4) return;
+  const isActive = step >= 4;
+  ctx.save();
+  ctx.shadowColor = '#ffd700';
+  ctx.shadowBlur = isActive ? 15 : 5;
+
+  // Stalk
+  ctx.fillStyle = '#c8a820';
+  ctx.beginPath();
+  ctx.rect(x - 6*s, memY - 20*s, 12*s, 40*s);
+  ctx.fill();
+
+  // Head (F1)
+  const rotation = isActive ? (t * 0.04) : 0;
+  ctx.translate(x, memY - 25*s);
+  ctx.rotate(rotation);
+  ctx.fillStyle = '#ffd700';
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    const bx = Math.cos(a) * 18*s, by = Math.sin(a) * 18*s;
+    i === 0 ? ctx.moveTo(bx, by) : ctx.lineTo(bx, by);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  label('ATP\nSentaz', x, memY + 40*s, '#ffd700', 9);
+
+  // ATP particles ejecting
+  if (isActive && Math.random() < 0.06) {
+    particles.push(createParticle(x, memY - 45*s, (Math.random()-0.5)*3, -2.5, '#ffd700', 'ATP', 60, 5));
+  }
+}
+
+function drawElectronFlow(ps2X, etcX, atpX, ps1X, memY, s) {
+  const positions = [ps2X, etcX, atpX, ps1X];
+  const count = Math.min(s3Step - 1, 3);
+  for (let i = 0; i < count; i++) {
+    const off = ((t * 0.02 + i * 0.33) % 1);
+    const x1 = positions[i], x2 = positions[i + 1];
+    const ex = x1 + (x2 - x1) * off;
+    const ey = memY - 30*s - Math.sin(off * Math.PI) * 20*s;
+    ctx.save();
+    ctx.fillStyle = '#4ab8ff';
+    ctx.shadowColor = '#4ab8ff';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(ex, ey, 4*s, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawProtonFlow(etcX, memY, s) {
+  const count = 3;
+  for (let i = 0; i < count; i++) {
+    const off = ((t * 0.015 + i * 0.33) % 1);
+    const py = (memY - 20*s) + off * 40*s;
+    ctx.save();
+    ctx.fillStyle = '#ff6b6b';
+    ctx.shadowColor = '#ff6b6b';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(etcX + (i - 1) * 15*s, py, 3*s, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawStepBox(sd, s) {
+  const bw = Math.min(W * 0.85, 360);
+  const bx = (W - bw) / 2;
+  const by = H - 110;
+  ctx.save();
+  ctx.fillStyle = 'rgba(10,30,20,0.85)';
+  ctx.strokeStyle = 'rgba(0,201,167,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, 85, 10);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.font = 'bold 13px system-ui';
+  ctx.fillStyle = '#00e6c0';
+  ctx.textAlign = 'left';
+  ctx.fillText(`Aşama ${s3Step + 1}/${s3MaxSteps}: ${sd.title}`, bx + 12, by + 20);
+
+  ctx.font = '11px system-ui';
+  ctx.fillStyle = '#a8d5b0';
+  // Wrap text
+  const words = sd.desc.split(' ');
+  let line = '', lineY = by + 40;
+  words.forEach(w => {
+    const test = line + w + ' ';
+    if (ctx.measureText(test).width > bw - 24) {
+      ctx.fillText(line, bx + 12, lineY);
+      line = w + ' ';
+      lineY += 16;
+    } else { line = test; }
+  });
+  ctx.fillText(line, bx + 12, lineY);
+  ctx.restore();
+}
+
+function showSection3Quiz() {
+  const q = {
+    q: 'Fotosentezde açığa çıkan O₂ nereden gelir?',
+    hint: '',
+    options: ['CO₂\'nin parçalanmasından', 'H₂O\'nun (suyun) oksidasyonundan', 'Klorofilden', 'ATP\'nin ayrışmasından'],
+    correct: 1,
+    feedback: 'Doğru! O₂, ışığa bağlı tepkimelerde Fotosistem II\'de suyun (H₂O) oksidasyonu sırasında açığa çıkar. Bu fotosentezin en önemli biyokimyasal gerçeklerinden biridir.'
+  };
+  showQuiz(q);
+}
+
+// ============================================================
+// SECTION 4 — CALVIN CYCLE
+// ============================================================
+let s4Step = 0;
+let s4Playing = false;
+let s4Phase = 'fixation'; // fixation, reduction, regeneration
+let co2Count = 0;
+let g3pCount = 0;
+
+function initSection4() {
+  s4Step = 0;
+  s4Playing = false;
+  s4Phase = 'fixation';
+  co2Count = 0;
+  g3pCount = 0;
+  canvas.onclick = null;
+  document.getElementById('atp-counter').style.display = 'none';
+  document.getElementById('nadph-counter').style.display = 'none';
+  document.getElementById('mol-indicators').innerHTML = '';
+}
+
+const calvinSteps = [
+  { phase: 'fixation', title: 'Karbon Tutulması', desc: 'CO₂ + RuBP → 2×3-PGA (Rubisco enzimi katalizler). CO₂ karbonu organik bileşiğe katılır.', color: '#4ab8ff' },
+  { phase: 'reduction', title: 'İndirgeme', desc: '3-PGA + ATP + NADPH → G3P. ATP ve NADPH harcanarak 3-karbonlu G3P oluşur.', color: '#ffd700' },
+  { phase: 'regeneration', title: 'RuBP Yenilenmesi', desc: 'G3P\'nin bir kısmı + ATP → RuBP. Döngü devam edebilmesi için kabul molekülü yenilenir.', color: '#3dd668' },
+  { phase: 'output', title: 'Ürün', desc: 'Net G3P → Glikoz ve diğer organik maddeler. 2 net G3P = 1 glikoz iskeleti (6 karbon döngüsünde elde edilir).', color: '#ff9f43' },
+];
+
+function renderSection4() {
+  // Stroma background
+  const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H));
+  bg.addColorStop(0, '#112810');
+  bg.addColorStop(1, '#050e08');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  const s = Math.min(W, H) / 500;
+  const cr = Math.min(W, H) * 0.28;
+
+  // === STROMA LABEL ===
+  glowText('STROMA', cx, 30, '#6aaa78', 11);
+
+  // === CALVIN CYCLE WHEEL ===
+  const phases = [
+    { angle: -Math.PI / 2, label: 'Karbon\nTutulması', sublabel: 'CO₂ + RuBP', color: '#4ab8ff', active: s4Step >= 0 },
+    { angle: -Math.PI / 2 + (Math.PI * 2 / 3), label: 'İndirgeme', sublabel: 'ATP + NADPH', color: '#ffd700', active: s4Step >= 1 },
+    { angle: -Math.PI / 2 + (Math.PI * 4 / 3), label: 'RuBP\nYenilenmesi', sublabel: 'ATP kullanılır', color: '#3dd668', active: s4Step >= 2 },
+  ];
+
+  // Cycle ring
+  ctx.save();
+  ctx.globalAlpha = 0.15;
+  ctx.strokeStyle = '#2aaa55';
+  ctx.lineWidth = cr * 0.18;
+  ctx.beginPath();
+  ctx.arc(cx, cy, cr, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+
+  // Animated rotation indicator
+  const rotSpeed = s4Playing ? t * 0.008 : 0;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(42,170,85,0.4)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8, 4]);
+  ctx.beginPath();
+  ctx.arc(cx, cy, cr, rotSpeed, rotSpeed + Math.PI * 2 * 0.85);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // Arrow at end
+  const endAngle = rotSpeed + Math.PI * 2 * 0.85;
+  const ax = cx + Math.cos(endAngle) * cr;
+  const ay = cy + Math.sin(endAngle) * cr;
+  ctx.save();
+  ctx.translate(ax, ay);
+  ctx.rotate(endAngle + Math.PI / 2);
+  ctx.fillStyle = '#2aaa55';
+  ctx.beginPath();
+  ctx.moveTo(0, -7);
+  ctx.lineTo(5, 5);
+  ctx.lineTo(-5, 5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  ctx.restore();
+
+  // Phase nodes
+  phases.forEach((ph, i) => {
+    const px = cx + Math.cos(ph.angle) * cr;
+    const py = cy + Math.sin(ph.angle) * cr;
+    const isActive = ph.active && s4Playing || s4Step > i;
+    const pulse = isActive ? (1 + 0.06 * Math.sin(t * 0.04 + i)) : 1;
+
+    ctx.save();
+    if (isActive) { ctx.shadowColor = ph.color; ctx.shadowBlur = 20; }
+    const ng = ctx.createRadialGradient(px - 5, py - 5, 2, px, py, 35 * s * pulse);
+    ng.addColorStop(0, ph.color + '88');
+    ng.addColorStop(1, ph.color + '22');
+    ctx.fillStyle = ng;
+    ctx.strokeStyle = isActive ? ph.color : 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = isActive ? 2 : 1;
+    ctx.beginPath();
+    ctx.arc(px, py, 35 * s * pulse, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    // Phase label
+    const lines = ph.label.split('\n');
+    ctx.save();
+    ctx.font = `bold ${10 * s}px system-ui`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = isActive ? ph.color : '#6aaa78';
+    lines.forEach((l, li) => ctx.fillText(l, px, py - 5 + li * 14 * s));
+    ctx.font = `${9 * s}px system-ui`;
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText(ph.sublabel, px, py + lines.length * 14 * s);
+    ctx.restore();
+  });
+
+  // === CENTER: KEY MOLECULE ===
+  drawGradCircle(cx, cy, 40 * s, '#1a5a2a', '#0a2a12', 1);
+  ctx.save();
+  ctx.strokeStyle = 'rgba(42,170,85,0.4)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 40 * s, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+  glowText('RUBP', cx, cy - 6, '#3dd668', 11);
+  glowText('(5C)', cx, cy + 8, '#a8d5b0', 9);
+
+  // === MOLECULES ENTERING/LEAVING ===
+  // CO2 entering
+  if (s4Step >= 0 && s4Playing) {
+    const ph = phases[0];
+    const px = cx + Math.cos(ph.angle) * cr;
+    const py = cy + Math.sin(ph.angle) * cr;
+    if (Math.random() < 0.07) {
+      particles.push(createParticle(px - 60, py - 20, 1.5, 0.3, '#4ab8ff', 'CO₂', 80, 5));
+    }
+  }
+
+  // ATP/NADPH consumption
+  if (s4Step >= 1 && s4Playing) {
+    const ph = phases[1];
+    const px = cx + Math.cos(ph.angle) * cr;
+    const py = cy + Math.sin(ph.angle) * cr;
+    if (Math.random() < 0.05) {
+      particles.push(createParticle(px + 50, py - 30, -1.5, 0.5, '#ffd700', 'ATP', 60, 4));
+      particles.push(createParticle(px + 60, py - 20, -1.6, 0.3, '#a29bfe', 'NADPH', 60, 4));
+    }
+  }
+
+  // G3P output
+  if (s4Step >= 1) {
+    const g3pX = cx + cr * 0.6, g3pY = cy + cr * 0.6;
+    drawGradCircle(g3pX, g3pY, 20 * s, '#ff9f4388', '#ff7f0022', 1);
+    glowText('G3P', g3pX, g3pY - 4, '#ff9f43', 10);
+    glowText('(3C)', g3pX, g3pY + 8, '#ff9f43', 8);
+    arrow(cx + cr * 0.3, cy + cr * 0.3, g3pX - 15, g3pY - 10, '#ff9f43', 1.5);
+
+    if (s4Step >= 3) {
+      const glcX = g3pX + 50, glcY = g3pY + 20;
+      arrow(g3pX + 18, g3pY, glcX - 15, glcY, '#ff6b35', 1.5);
+      glowText('Glikoz', glcX, glcY, '#ff6b35', 10);
+    }
+  }
+
+  // === ATP + NADPH indicators ===
+  const indY = H * 0.88;
+  ctx.save();
+  ctx.font = '10px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffd700';
+  ctx.fillText(`ATP tüketimi: ${s4Step >= 1 ? '9 ATP / 3 CO₂' : '—'}`, cx - 80, indY);
+  ctx.fillStyle = '#a29bfe';
+  ctx.fillText(`NADPH tüketimi: ${s4Step >= 1 ? '6 NADPH / 3 CO₂' : '—'}`, cx + 80, indY);
+  ctx.restore();
+
+  // === Step info ===
+  if (s4Step < calvinSteps.length) {
+    const sd = calvinSteps[s4Step];
+    drawStepBox({ title: sd.title, desc: sd.desc }, Math.min(W, H) / 500);
+  }
+
+  // Auto advance
+  if (s4Playing) {
+    s3StepT++;
+    if (s3StepT > 100) {
+      s3StepT = 0;
+      if (s4Step < calvinSteps.length - 1) {
+        s4Step++;
+      } else {
+        s4Playing = false;
+        showCalvinQuiz();
+      }
+    }
+  }
+}
+
+function showCalvinQuiz() {
+  const q = {
+    q: 'Calvin döngüsünün temel karbon ürünü nedir?',
+    hint: 'İpucu: Glikoz değil, daha küçük bir molekül!',
+    options: ['Glikoz (C₆H₁₂O₆)', 'RuBP (5C)', 'G3P (gliseraldehit-3-fosfat)', 'ATP'],
+    correct: 2,
+    feedback: 'Doğru! Calvin döngüsünün doğrudan ürünü G3P\'dir (gliseraldehit-3-fosfat). G3P ileride glikoz ve diğer organik moleküllerin sentezinde kullanılır.'
+  };
+  showQuiz(q);
+}
+
+// ============================================================
+// SECTION 5 — EXPERIMENT
+// ============================================================
+let expRateHistory = [];
+let predActive = false;
+
+function initSection5() {
+  canvas.onclick = null;
+  document.getElementById('mol-indicators').innerHTML = '';
+  document.getElementById('atp-counter').style.display = 'none';
+  document.getElementById('nadph-counter').style.display = 'none';
+  document.getElementById('experiment-panel').classList.add('show');
+  expRateHistory = [];
+  updateExperiment();
+  showPrediction(0);
+}
+
+function calcRate() {
+  const light = parseInt(document.getElementById('sl-light').value) / 100;
+  const co2 = parseInt(document.getElementById('sl-co2').value) / 100;
+  const temp = parseInt(document.getElementById('sl-temp').value);
+  const water = parseInt(document.getElementById('sl-water').value) / 100;
+
+  // Enzyme curve for temp (optimum ~30°C)
+  const tempFactor = Math.max(0, 1 - Math.pow((temp - 28) / 22, 2));
+
+  // Liebig's Law — minimum limits
+  const limitFactor = Math.min(light, co2, water) * 0.6 + Math.min(light, co2, water, tempFactor) * 0.4;
+  const rate = Math.round(limitFactor * tempFactor * 100);
+  return Math.min(100, Math.max(0, rate));
+}
+
+function updateExperiment() {
+  const l = document.getElementById('sl-light').value;
+  const c = document.getElementById('sl-co2').value;
+  const temp = document.getElementById('sl-temp').value;
+  const w = document.getElementById('sl-water').value;
+  document.getElementById('lbl-light').textContent = l + '%';
+  document.getElementById('lbl-co2').textContent = c + '%';
+  document.getElementById('lbl-temp').textContent = temp + '°C';
+  document.getElementById('lbl-water').textContent = w + '%';
+  const rate = calcRate();
+  document.getElementById('rate-val').textContent = rate;
+  expRateHistory.push(rate);
+  if (expRateHistory.length > rateHistMax) expRateHistory.shift();
+  drawMiniChart();
+}
+
+function drawMiniChart() {
+  const c2 = document.getElementById('mini-chart');
+  const ctx2 = c2.getContext('2d');
+  ctx2.clearRect(0, 0, 176, 50);
+  if (expRateHistory.length < 2) return;
+  const w2 = 176, h2 = 50;
+  ctx2.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx2.fillRect(0, 0, w2, h2);
+  ctx2.strokeStyle = '#2aaa55';
+  ctx2.lineWidth = 1.5;
+  ctx2.beginPath();
+  expRateHistory.forEach((v, i) => {
+    const x = (i / (rateHistMax - 1)) * w2;
+    const y = h2 - (v / 100) * (h2 - 6) - 3;
+    i === 0 ? ctx2.moveTo(x, y) : ctx2.lineTo(x, y);
+  });
+  ctx2.stroke();
+  // Fill
+  ctx2.globalAlpha = 0.1;
+  ctx2.fillStyle = '#2aaa55';
+  ctx2.lineTo(w2, h2);
+  ctx2.lineTo(0, h2);
+  ctx2.closePath();
+  ctx2.fill();
+  ctx2.globalAlpha = 1;
+}
+
+const predictions = [
+  {
+    q: '💡 Işık şiddetini artırırsam ne olur?',
+    opts: ['Hız sürekli artar', 'Hız önce artar, sonra düzleşir', 'Hiç değişmez', 'Hız azalır'],
+    correct: 1,
+    feedback: 'Işık artınca hız önce artar, ancak CO₂ veya su gibi başka faktörler sınırlayıcı olursa hız belirli bir noktadan sonra artmaz (sınırlayıcı faktör prensibi).'
+  },
+  {
+    q: '🌡️ Sıcaklık 45°C\'ye çıkınca ne olur?',
+    opts: ['Hız çok artar', 'Hız değişmez', 'Hız düşer — enzimler zarar görür', 'Sadece oksijen azalır'],
+    correct: 2,
+    feedback: 'Yüksek sıcaklık (>35-40°C) Rubisco ve diğer enzimlerin 3D yapısını bozar (denatürasyon). Bu fotosentez hızını dramatik biçimde düşürür.'
+  },
+  {
+    q: '💨 CO₂ azalırsa ve ışığı artırırsam?',
+    opts: ['Hız artar, CO₂ önemli değil', 'Hız artmaz, CO₂ sınırlayıcıdır', 'Sadece O₂ azalır', 'ATP üretimi durur'],
+    correct: 1,
+    feedback: 'CO₂ Calvin döngüsünün temel ham maddesidir. CO₂ azsa ışığı ne kadar artırırsanız artırın, Calvin döngüsü yavaşlayacağı için genel fotosentez hızı düşük kalır.'
+  }
+];
+let predIdx = 0;
+
+function showPrediction(idx) {
+  if (idx >= predictions.length) return;
+  predIdx = idx;
+  const p = predictions[idx];
+  document.getElementById('pred-q').textContent = p.q;
+  const optsDiv = document.getElementById('pred-options');
+  optsDiv.innerHTML = '';
+  p.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'pred-btn';
+    btn.textContent = opt;
+    btn.onclick = () => handlePrediction(i, btn, p);
+    optsDiv.appendChild(btn);
+  });
+  document.getElementById('prediction-panel').classList.add('show');
+}
+
+function handlePrediction(idx, btn, pred) {
+  const allBtns = document.querySelectorAll('.pred-btn');
+  allBtns.forEach(b => b.disabled = true);
+  btn.classList.add('picked');
+  const isCorrect = idx === pred.correct;
+
+  setTimeout(() => {
+    document.getElementById('popup-title').textContent = isCorrect ? '✅ Doğru Tahmin!' : '❌ Tekrar düşün';
+    document.getElementById('popup-text').textContent = pred.feedback;
+    document.getElementById('popup').classList.add('show');
+    document.getElementById('prediction-panel').classList.remove('show');
+
+    setTimeout(() => {
+      if (predIdx < predictions.length - 1) {
+        showPrediction(predIdx + 1);
+      }
+    }, 3000);
+  }, 500);
+}
+
+function renderSection5() {
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#050e08');
+  bg.addColorStop(0.5, '#091808');
+  bg.addColorStop(1, '#030809');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  const s = Math.min(W, H) / 500;
+  const rate = calcRate();
+
+  // === PLANT SILHOUETTE ===
+  const soilY = H * 0.78;
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+  drawLeaf3D(cx - 10, cy - 50, 60 * s, -0.3, t * 0.5);
+  drawLeaf3D(cx - 70, cy + 10, 40 * s, -0.8, t * 0.5 + 1);
+  drawLeaf3D(cx + 65, cy - 20, 38 * s, 0.5, t * 0.5 + 2);
+
+  // Stem
+  ctx.globalAlpha = 0.6;
+  ctx.strokeStyle = '#2aaa40';
+  ctx.lineWidth = 8 * s;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx, soilY);
+  ctx.bezierCurveTo(cx - 10, soilY - 60, cx + 8, cy + 70, cx, cy + 10);
+  ctx.stroke();
+  ctx.restore();
+
+  // Soil
+  ctx.fillStyle = '#1a0d06';
+  ctx.fillRect(0, soilY, W, H - soilY);
+
+  // === RATE VISUALIZATION BARS ===
+  const barsX = W * 0.62;
+  const barsY = H * 0.2;
+  const barW = 18, barMaxH = H * 0.45, barGap = 28;
+  const factors = [
+    { label: '☀️ Işık', val: parseInt(document.getElementById('sl-light').value), color: '#ffd700' },
+    { label: '💨 CO₂', val: parseInt(document.getElementById('sl-co2').value), color: '#4ab8ff' },
+    { label: '🌡️ Sıcaklık', val: parseInt(document.getElementById('sl-temp').value) * 2, color: '#ff9f43', max: 100 },
+    { label: '💧 Su', val: parseInt(document.getElementById('sl-water').value), color: '#00c9a7' },
+  ];
+
+  factors.forEach((f, i) => {
+    const bx = barsX + i * (barW + barGap);
+    const norm = Math.min(f.val, 100) / 100;
+    const bh = norm * barMaxH;
+
+    // Bar background
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.beginPath();
+    ctx.roundRect(bx, barsY, barW, barMaxH, 4);
+    ctx.fill();
+
+    // Bar fill
+    const bg2 = ctx.createLinearGradient(bx, barsY + barMaxH, bx, barsY + barMaxH - bh);
+    bg2.addColorStop(0, f.color + '44');
+    bg2.addColorStop(1, f.color);
+    ctx.fillStyle = bg2;
+    ctx.save();
+    ctx.shadowColor = f.color;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.roundRect(bx, barsY + barMaxH - bh, barW, bh, 4);
+    ctx.fill();
+    ctx.restore();
+
+    // Label
+    label(f.label, bx + barW / 2, barsY + barMaxH + 16, f.color, 9);
+  });
+
+  // Rate arrow
+  const rateH = (rate / 100) * barMaxH;
+  const rateY = barsY + barMaxH - rateH;
+  ctx.save();
+  ctx.strokeStyle = '#3dd668';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.moveTo(barsX - 10, rateY);
+  ctx.lineTo(barsX + factors.length * (barW + barGap) + 10, rateY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+  glowText(`Hız: ${rate}`, barsX - 30, rateY, '#3dd668', 10);
+
+  // === O2 / GLUCOSE bubble outputs ===
+  if (rate > 30 && Math.random() < 0.04) {
+    particles.push(createParticle(cx + (Math.random()-0.5)*80, cy - 50, (Math.random()-0.5)*2, -1.5, '#3dd668', 'O₂', 80, 4));
+  }
+
+  // === ECOSYSTEM VIEW (bottom) ===
+  const ecoY = H * 0.92;
+  const ecoItems = [
+    { label: 'Bitki', x: cx - 150, icon: '🌿' },
+    { label: 'Besin Zinciri', x: cx - 60, icon: '→' },
+    { label: 'Otçul', x: cx + 10, icon: '🐇' },
+    { label: '→', x: cx + 65, icon: '' },
+    { label: 'Etçil', x: cx + 110, icon: '🦊' },
+    { label: 'O₂ / CO₂', x: cx + 170, icon: '🌍' },
+  ];
+  ctx.save();
+  ctx.font = '11px system-ui';
+  ctx.textAlign = 'center';
+  ecoItems.forEach(e => {
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText(e.icon + ' ' + e.label, e.x, ecoY);
+  });
+  ctx.restore();
+}
+
+// ============================================================
+// QUIZ SYSTEM
+// ============================================================
+let currentQuiz = null;
+
+function showQuiz(q) {
+  currentQuiz = q;
+  document.getElementById('quiz-q').textContent = q.q;
+  document.getElementById('quiz-hint').textContent = q.hint || '';
+  const optsDiv = document.getElementById('quiz-options');
+  optsDiv.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'quiz-option';
+    btn.textContent = opt;
+    btn.onclick = () => answerQuiz(i, btn, q);
+    optsDiv.appendChild(btn);
+  });
+  document.getElementById('quiz-feedback').classList.remove('show');
+  document.getElementById('quiz-next').classList.remove('show');
+  document.getElementById('quiz-panel').classList.add('show');
+}
+
+function answerQuiz(idx, btn, q) {
+  const allBtns = document.querySelectorAll('.quiz-option');
+  allBtns.forEach(b => { b.disabled = true; });
+  const isCorrect = idx === q.correct;
+  btn.classList.add(isCorrect ? 'correct' : 'wrong');
+  if (!isCorrect) allBtns[q.correct].classList.add('correct');
+
+  const fb = document.getElementById('quiz-feedback');
+  fb.textContent = (isCorrect ? '✅ ' : '❌ ') + q.feedback;
+  fb.style.background = isCorrect ? 'rgba(61,214,104,0.1)' : 'rgba(255,107,107,0.1)';
+  fb.style.color = isCorrect ? '#3dd668' : '#ff9f43';
+  fb.classList.add('show');
+  document.getElementById('quiz-next').classList.add('show');
+}
+
+function nextQuiz() {
+  document.getElementById('quiz-panel').classList.remove('show');
+}
+
+// ============================================================
+// MAIN LOOP
+// ============================================================
+function loop() {
+  ctx.clearRect(0, 0, W, H);
+  t++;
+  updateParticles();
+
+  switch (currentSection) {
+    case 1: renderSection1(); break;
+    case 2: renderSection2(); break;
+    case 3: renderSection3(); break;
+    case 4: renderSection4(); break;
+    case 5: renderSection5(); break;
+  }
+
+  drawParticles();
+  animFrame = requestAnimationFrame(loop);
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function gotoSection(n) {
+  // Cleanup
+  particles = [];
+  document.getElementById('popup').classList.remove('show');
+  document.getElementById('quiz-panel').classList.remove('show');
+  document.getElementById('prediction-panel').classList.remove('show');
+  document.getElementById('atp-counter').style.display = 'none';
+  document.getElementById('nadph-counter').style.display = 'none';
+  document.getElementById('experiment-panel').classList.remove('show');
+
+  // Reset canvas click
+  canvas.onclick = null;
+
+  currentSection = n;
+  s3Step = 0;
+  s4Step = 0;
+  s3Playing = false;
+  s4Playing = false;
+  s3StepT = 0;
+
+  // Update nav buttons
+  for (let i = 1; i <= 5; i++) {
+    document.getElementById('nav' + i).classList.toggle('active', i === n);
+    document.getElementById('pd' + i).classList.remove('active', 'done');
+    if (i === n) document.getElementById('pd' + i).classList.add('active');
+    if (i < n) document.getElementById('pd' + i).classList.add('done');
+  }
+
+  // Update section subtitle
+  const names = ['', 'Genel Bakış', 'Kloroplast İç Yapısı', 'Işığa Bağlı Tepkimeler', 'Calvin Döngüsü', 'Sonuçlar & Deney'];
+  document.getElementById('stage-label').textContent = names[n];
+
+  // Update info panel
+  const info = sectionInfo[n];
+  document.getElementById('ip-title').textContent = info.ipTitle;
+  document.getElementById('ip-text').textContent = info.ipText;
+  document.getElementById('ip-formula').textContent = info.ipFormula;
+
+  // Init section
+  switch (n) {
+    case 1: initSection1(); break;
+    case 2: initSection2(); break;
+    case 3: initSection3(); break;
+    case 4: initSection4(); break;
+    case 5: initSection5(); break;
+  }
+}
+
+function togglePlay() {
+  const btn = document.getElementById('play-btn');
+  if (currentSection === 3) {
+    s3Playing = !s3Playing;
+    btn.textContent = s3Playing ? '⏸ Duraklat' : '▶ Devam';
+  } else if (currentSection === 4) {
+    s4Playing = !s4Playing;
+    btn.textContent = s4Playing ? '⏸ Duraklat' : '▶ Devam';
+  } else {
+    // Section 1: toggle all molecules
+    const allOn = Object.values(s1Active).every(v => v);
+    Object.keys(s1Active).forEach(k => s1Active[k] = !allOn);
+    document.querySelectorAll('.mol-ind').forEach(el => {
+      el.style.opacity = allOn ? '0.4' : '1';
+    });
+  }
+}
+
+function nextStep() {
+  if (currentSection === 3) {
+    if (s3Step < s3MaxSteps - 1) {
+      s3Step++;
+      atpCount = s3StepData[s3Step].atp;
+      nadphCount = s3StepData[s3Step].nadph;
+      updateCounters();
+    }
+  } else if (currentSection === 4) {
+    if (s4Step < calvinSteps.length - 1) s4Step++;
+  }
+}
+
+function prevStep() {
+  if (currentSection === 3) {
+    if (s3Step > 0) {
+      s3Step--;
+      atpCount = s3StepData[s3Step].atp;
+      nadphCount = s3StepData[s3Step].nadph;
+      updateCounters();
+    }
+  } else if (currentSection === 4) {
+    if (s4Step > 0) s4Step--;
+  }
+}
+
+function resetAnim() {
+  s3Step = 0;
+  s4Step = 0;
+  s3Playing = false;
+  s4Playing = false;
+  s3StepT = 0;
+  atpCount = 0;
+  nadphCount = 0;
+  updateCounters();
+  document.getElementById('play-btn').textContent = '▶ Başlat';
+  particles = particles.filter(p => false);
+}
+
+// Touch support for canvas
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const t2 = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const mx = t2.clientX - rect.left;
+  const my = t2.clientY - rect.top;
+  if (currentSection === 2) handleSection2Click(mx, my);
+}, { passive: false });
+
+// Prevent page scroll on canvas touch
+canvas.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+
+// ============================================================
+// START
+// ============================================================
+gotoSection(1);
+loop();
+</script>
+</body>
+</html>
